@@ -126,42 +126,19 @@ body::before{
 .corner.bl{bottom:2px; left:2px; transform:scaleY(-1);}
 .corner.br{bottom:2px; right:2px; transform:scale(-1,-1);}
 
-/* ---------- artwork layers ---------- */
+/* ---------- artwork photo ---------- */
 .artboard{
   position:absolute; inset:0;
 }
-.artwork{
+#artworkImg{
   position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
+  width:100%; height:100%;
+  object-fit:cover;
+  opacity:0;
+  transition:opacity .25s ease;
 }
-.artwork svg{ width:78%; height:78%; }
-
-/* progressive reveal layers inside each artwork svg, toggled via data-phase on .artboard */
-.layer-outline{ transition:opacity .35s ease; }
-.layer-wash, .layer-color, .layer-detail, .layer-gloss{ transition:opacity .35s ease; }
-.layer-wash{ opacity:0; }
-.layer-color{ opacity:0; }
-.layer-detail{ opacity:0; }
-.layer-gloss{ opacity:0; }
-
-/* phase 0 = untouched blank canvas, before any field is filled */
-.artboard[data-phase="0"] .layer-outline{ opacity:0; }
-
-.artboard[data-phase="1"] .layer-wash{ opacity:0.55; }
-.artboard[data-phase="2"] .layer-wash{ opacity:1; }
-.artboard[data-phase="3"] .layer-wash{ opacity:1; }
-.artboard[data-phase="3"] .layer-color{ opacity:0.85; }
-.artboard[data-phase="4"] .layer-wash{ opacity:1; }
-.artboard[data-phase="4"] .layer-color{ opacity:1; }
-.artboard[data-phase="4"] .layer-detail{ opacity:1; }
-.artboard[data-phase="5"] .layer-wash{ opacity:1; }
-.artboard[data-phase="5"] .layer-color{ opacity:1; }
-.artboard[data-phase="5"] .layer-detail{ opacity:1; }
-.artboard[data-phase="5"] .layer-gloss{ opacity:0.9; }
-
-.artboard[data-phase="1"] .layer-outline{ filter:none; }
-.artboard[data-phase="1"] svg .sketch-only{ display:inline; }
-.artboard:not([data-phase="1"]) svg .sketch-only{ display:none; }
+.artboard[data-phase="0"] #artworkImg{ opacity:0; } /* blank canvas — no photo yet */
+.artboard:not([data-phase="0"]) #artworkImg{ opacity:1; }
 
 /* the brush-wipe cover that sweeps across on every phase change */
 .brush-wipe{
@@ -332,116 +309,11 @@ button:active{ transform:scale(0.98); }
 
     <div class="frame-inner">
       <div class="artboard" id="artboard" data-phase="0">
-        <!-- 5 artwork slots; JS shows the one chosen for this session -->
-        <div class="artwork" data-art="honu" style="display:none">
-          <svg viewBox="0 0 200 200">
-            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.4" stroke-linejoin="round">
-              <path d="M100 62c-26 0-46 17-52 39-3 12 2 18 10 15 4 8 12 13 16 20-3 7 2 14 10 12 5 9 20 12 32 6 4 6 14 6 17-2 9 1 14-7 11-14 8-1 12-9 8-16 6-6 4-16-4-19-3-19-22-41-48-41z"/>
-              <circle cx="78" cy="88" r="3.2" fill="#1E241F"/>
-              <path d="M62 100c-10 4-18 2-22-6M138 100c10 4 18 2 22-6M96 150c-2 9-8 14-16 14M114 150c2 9 8 14 16 14" />
-            </g>
-            <g class="layer-wash">
-              <path d="M100 62c-26 0-46 17-52 39-3 12 2 18 10 15 4 8 12 13 16 20-3 7 2 14 10 12 5 9 20 12 32 6 4 6 14 6 17-2 9 1 14-7 11-14 8-1 12-9 8-16 6-6 4-16-4-19-3-19-22-41-48-41z" fill="#cfc6ab"/>
-            </g>
-            <g class="layer-color">
-              <path d="M100 66c-23 0-41 15-47 35 10-6 22-9 33-8 15 1 28 9 34 21 6-3 8-9 5-15-3-19-22-33-25-33z" fill="#2f7d6c"/>
-              <path d="M63 105c6 10 16 17 27 20 13 3 27 0 36-8-4-14-17-25-33-27-13-1-24 5-30 15z" fill="#3f9c86"/>
-            </g>
-            <g class="layer-detail" fill="none" stroke="#164a3d" stroke-width="1.3">
-              <path d="M100 70c-6 8-6 18 0 26M78 82c4 6 4 14-1 20M124 84c-5 6-5 13 0 19M92 118c3 6 3 12 0 17M112 120c-3 6-3 12 0 17"/>
-            </g>
-            <g class="layer-gloss">
-              <ellipse cx="86" cy="76" rx="8" ry="4" fill="#ffffff" opacity="0.35"/>
-            </g>
-          </svg>
-        </div>
-        <div class="artwork" data-art="whale" style="display:none">
-          <svg viewBox="0 0 200 200">
-            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.4" stroke-linejoin="round">
-              <path d="M40 150c20-70 70-92 108-78 14 5 20 16 14 24-10 2-24-2-30 4 10 4 18 12 16 20-10 4-24 0-30-6-4 14-18 24-34 26-16 22-34 24-44 10z"/>
-              <path d="M118 66c8-10 22-14 30-8-4 8-14 14-24 14z"/>
-            </g>
-            <g class="layer-wash">
-              <path d="M40 150c20-70 70-92 108-78 14 5 20 16 14 24-10 2-24-2-30 4 10 4 18 12 16 20-10 4-24 0-30-6-4 14-18 24-34 26-16 22-34 24-44 10z" fill="#c9d3d0"/>
-            </g>
-            <g class="layer-color">
-              <path d="M50 146c18-56 58-78 92-70 8 2 12 8 10 14-30-8-64 4-82 40-6 12-14 18-20 16z" fill="#0F4C4A"/>
-              <path d="M62 156c8-4 14-12 18-22 20 4 42-2 56-18 4 10-2 22-14 30-18 12-42 16-60 10z" fill="#1c6b64"/>
-            </g>
-            <g class="layer-detail" fill="none" stroke="#08302e" stroke-width="1.2">
-              <path d="M60 130c6-18 18-32 32-40M84 96c10-4 22-4 32 2M64 150c14 4 30 2 42-8"/>
-            </g>
-            <g class="layer-gloss">
-              <ellipse cx="70" cy="112" rx="10" ry="5" fill="#ffffff" opacity="0.3"/>
-            </g>
-          </svg>
-        </div>
-        <div class="artwork" data-art="iiwi" style="display:none">
-          <svg viewBox="0 0 200 200">
-            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.4" stroke-linejoin="round">
-              <path d="M120 70c18-6 34 2 38 14-10 4-20 2-26-4 4 8 2 18-6 22 6 10 2 22-10 26-2 12-14 20-28 18-16 10-34 2-38-14-10-2-16-12-12-22-8-6-8-18 2-24 2-10 12-16 22-14 8-8 22-8 30 0z"/>
-              <circle cx="132" cy="82" r="2.6" fill="#1E241F"/>
-              <path d="M148 84c8 0 14 4 16 10-8 2-16-2-18-8z"/>
-            </g>
-            <g class="layer-wash">
-              <path d="M120 70c18-6 34 2 38 14-10 4-20 2-26-4 4 8 2 18-6 22 6 10 2 22-10 26-2 12-14 20-28 18-16 10-34 2-38-14-10-2-16-12-12-22-8-6-8-18 2-24 2-10 12-16 22-14 8-8 22-8 30 0z" fill="#d8c9a3"/>
-            </g>
-            <g class="layer-color">
-              <path d="M124 74c14-4 26 2 30 10-16-4-30 2-38 14-8-10-20-14-32-10 6-10 18-16 30-14 4-4 6 0 10 0z" fill="#C1502E"/>
-              <path d="M64 126c-4 10 2 20 12 22 12 2 24-6 28-18-14-6-28-6-40-4z" fill="#d9663c"/>
-            </g>
-            <g class="layer-detail" fill="none" stroke="#7a2b16" stroke-width="1.2">
-              <path d="M96 100c8-4 18-4 26 0M74 128c8 2 16 0 22-6"/>
-            </g>
-            <g class="layer-gloss">
-              <ellipse cx="128" cy="80" rx="6" ry="3" fill="#ffffff" opacity="0.4"/>
-            </g>
-          </svg>
-        </div>
-        <div class="artwork" data-art="hibiscus" style="display:none">
-          <svg viewBox="0 0 200 200">
-            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.2" stroke-linejoin="round">
-              <path d="M100 60c8 12 6 26-2 34 14-4 26 2 30 14-14 2-24-4-30-14 6 14 2 28-10 34 2-14-4-26-14-32 2 14-4 26-16 30 6-12 4-24-4-32-12 2-22-4-26-16 12-2 22 4 26 14-4-14 2-28 14-34-8 8-8 20 0 28 2-14 14-24 28-24-10-4-16-14-14-24 8 4 14 12 18 22z"/>
-              <circle cx="100" cy="100" r="6" fill="#1E241F"/>
-              <path d="M100 106c2 10 2 20-2 28" />
-            </g>
-            <g class="layer-wash">
-              <circle cx="100" cy="100" r="42" fill="#dcc9c1"/>
-            </g>
-            <g class="layer-color">
-              <path d="M100 60c8 12 6 26-2 34 14-4 26 2 30 14-14 2-24-4-30-14 6 14 2 28-10 34 2-14-4-26-14-32 2 14-4 26-16 30 6-12 4-24-4-32-12 2-22-4-26-16 12-2 22 4 26 14-4-14 2-28 14-34-8 8-8 20 0 28 2-14 14-24 28-24-10-4-16-14-14-24 8 4 14 12 18 22z" fill="#C1502E"/>
-            </g>
-            <g class="layer-detail" fill="none" stroke="#7a2b16" stroke-width="1.1">
-              <path d="M100 66c4 10 4 20 0 28M74 80c8 4 14 12 16 20M126 80c-8 4-14 12-16 20M70 118c8-2 16-8 20-16M130 118c-8-2-16-8-20-16"/>
-            </g>
-            <g class="layer-gloss">
-              <ellipse cx="90" cy="88" rx="6" ry="3" fill="#ffffff" opacity="0.35"/>
-            </g>
-          </svg>
-        </div>
-        <div class="artwork" data-art="reef" style="display:none">
-          <svg viewBox="0 0 200 200">
-            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.2" stroke-linejoin="round">
-              <path d="M40 110c30-24 60-24 90-6 10-10 24-12 34-4-4 12-16 18-28 16 4 8 2 18-6 22-16 10-38 6-50-6-18 8-36 2-40-14z"/>
-              <path d="M118 96l16-14M120 118l18 6"/>
-              <circle cx="66" cy="104" r="2.4" fill="#1E241F"/>
-            </g>
-            <g class="layer-wash">
-              <path d="M40 110c30-24 60-24 90-6 10-10 24-12 34-4-4 12-16 18-28 16 4 8 2 18-6 22-16 10-38 6-50-6-18 8-36 2-40-14z" fill="#cdd8c9"/>
-            </g>
-            <g class="layer-color">
-              <path d="M46 108c26-18 52-18 78-4-4 12-16 20-30 20-20 0-38-6-48-16z" fill="#C79A3D"/>
-              <path d="M96 106c8-10 20-16 34-14 6 10-2 22-14 26-10-2-16-6-20-12z" fill="#0F4C4A"/>
-            </g>
-            <g class="layer-detail" fill="none" stroke="#5c4413" stroke-width="1.1">
-              <path d="M54 108c10-6 22-8 32-6M100 110c6-6 14-10 22-10"/>
-            </g>
-            <g class="layer-gloss">
-              <ellipse cx="60" cy="100" rx="6" ry="3" fill="#ffffff" opacity="0.35"/>
-            </g>
-          </svg>
-        </div>
+        <img id="artworkImg" src="" alt="Ohana artwork in progress" />
       </div>
+
+      <div class="brush-wipe" id="wipe"></div>
+      <div class="phase-caption" id="phaseCaption">Blank canvas</div>
 
       <div class="brush-wipe" id="wipe"></div>
       <div class="phase-caption" id="phaseCaption">Blank canvas</div>
@@ -511,16 +383,20 @@ button:active{ transform:scale(0.98); }
 // 1) Paste the Google Apps Script Web App URL here (see SETUP.md)
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzB08TZ3_MGXs647qNnoUxAxvuAxonvMPWkYDPoCOrX25eOXJ2dYgRl82kodtXyAGAf/exec";
 
-// 2) The 5 artwork keys must match the data-art attributes above.
-//    Order doesn't matter — one is picked at random per guest.
-const ARTWORKS = ["honu", "whale", "iiwi", "hibiscus", "reef"];
-const ARTWORK_LABELS = {
-  honu: "Honu — Green Sea Turtle",
-  whale: "Koholā — Humpback Whale",
-  iiwi: "ʻIʻiwi — Scarlet Honeycreeper",
-  hibiscus: "Hibiscus",
-  reef: "Reef Scene"
-};
+// 2) The photo for each phase of the Ohana piece. Phase 0 is the blank
+//    canvas (no image). Only 4 photos exist for the 5 phases, so the
+//    5th (finished/note) phase just reuses the last photo.
+//    Drive files must be shared "Anyone with the link can view" or these
+//    won't load for guests.
+const PHASE_IMAGES = [
+  null,
+  "https://drive.google.com/uc?export=view&id=1CbfudLJ-OvaMQvlyQPs-4DBlzdsYkQsB", // phase 1
+  "https://drive.google.com/uc?export=view&id=1GuwWw0dIGRPl8UonHhMohzXdYRdXvVBw", // phase 2
+  "https://drive.google.com/uc?export=view&id=1N-2WY_7JT7Gku0OKWxijQNfQ7nZ7oZ9C", // phase 3
+  "https://drive.google.com/uc?export=view&id=17uZdE2Wmhd30coxaZ0K1qfNw-ro9rTlQ", // phase 4
+  "https://drive.google.com/uc?export=view&id=17uZdE2Wmhd30coxaZ0K1qfNw-ro9rTlQ"  // phase 5 (finished — same as phase 4)
+];
+const ARTWORK_NAME = "Ohana";
 
 /* ============================================================
    Field definitions — order here just controls the "sketch → finished"
@@ -535,21 +411,18 @@ const FIELDS = [
 ];
 
 let phaseReached = 0; // how many fields are currently valid (0-5)
-let chosenArt = ARTWORKS[Math.floor(Math.random()*ARTWORKS.length)];
 
 const artboard = document.getElementById('artboard');
+const artworkImg = document.getElementById('artworkImg');
 const wipe = document.getElementById('wipe');
 const caption = document.getElementById('phaseCaption');
 const palette = document.getElementById('palette');
 const stepCard = document.getElementById('stepCard');
 const thanksCard = document.getElementById('thanksCard');
 
-function showArtwork(key){
-  document.querySelectorAll('.artwork').forEach(el=>{
-    el.style.display = (el.dataset.art === key) ? 'flex' : 'none';
-  });
-}
-showArtwork(chosenArt);
+// Preload every phase photo so the wipe transition never has to wait on
+// a slow image load mid-animation.
+PHASE_IMAGES.forEach(url => { if(url){ const im = new Image(); im.src = url; } });
 
 function updatePalette(n){
   palette.querySelectorAll('.dab').forEach(d=>{
@@ -566,6 +439,8 @@ function triggerWipe(newPhase, newCaption){
   setTimeout(()=>{
     artboard.dataset.phase = String(newPhase);
     caption.textContent = newCaption;
+    const url = PHASE_IMAGES[newPhase];
+    if(url) artworkImg.src = url;
   }, 300); // swap mid-sweep, under cover of the brush
   updatePalette(newPhase);
 }
@@ -573,6 +448,10 @@ function triggerWipe(newPhase, newCaption){
 function getInput(key){
   return document.getElementById('f_' + key);
 }
+
+// Real Ohana photos are hosted on Drive now, so the email just links to
+// the finished-phase photo directly — the backend picks it up via
+// ARTWORK_IMAGE_URLS (see apps-script.gs). No client-side rendering needed.
 
 // Recompute how many fields are currently valid, and animate the
 // artwork forward or back if that count has changed.
@@ -635,7 +514,7 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
     phone: getInput('phone').value.trim(),
     city: getInput('city').value.trim(),
     note: getInput('note').value.trim(),
-    artwork: ARTWORK_LABELS[chosenArt] || chosenArt,
+    artwork: ARTWORK_NAME,
     timestamp: new Date().toISOString()
   };
 
@@ -672,9 +551,8 @@ function resetKiosk(){
     getInput(f.key).value = "";
     document.getElementById('err_' + f.key).textContent = "";
   });
-  chosenArt = ARTWORKS[Math.floor(Math.random()*ARTWORKS.length)];
-  showArtwork(chosenArt);
   artboard.dataset.phase = "0";
+  artworkImg.src = "";
   caption.textContent = "Blank canvas";
   updatePalette(0);
   thanksCard.classList.add('hidden');
