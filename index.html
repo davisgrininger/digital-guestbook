@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Patrick Ching — Guest Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CONFIG — the only two things you should ever need to touch
+   ============================================================ */
+:root{
+  --ink:#1E241F;
+  --canvas:#F2EBDA;
+  --canvas-shadow:#E4D8BC;
+  --ocean:#0F4C4A;
+  --ocean-deep:#0A3634;
+  --coral:#C1502E;
+  --gold:#C79A3D;
+  --gold-light:#E4C878;
+  --sand:#E4D8BB;
+  --paper:#FBF7EE;
+  --err:#B0402A;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(199,154,61,0.10), transparent 55%),
+    radial-gradient(ellipse at 100% 110%, rgba(15,76,74,0.18), transparent 60%),
+    var(--canvas);
+  background-attachment:fixed;
+  font-family:'Work Sans', sans-serif;
+  color:var(--ink);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:28px 16px;
+  position:relative;
+  overflow-x:hidden;
+}
+body::before{
+  /* canvas / wall texture */
+  content:"";
+  position:fixed; inset:0;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.015) 0px, transparent 1px, transparent 3px),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.012) 0px, transparent 1px, transparent 3px);
+  pointer-events:none;
+  z-index:0;
+}
+
+.stage{
+  width:100%;
+  max-width:480px;
+  position:relative;
+  z-index:1;
+}
+
+/* ---------- header ---------- */
+.masthead{
+  text-align:center;
+  margin-bottom:18px;
+}
+.masthead .eyebrow{
+  font-family:'JetBrains Mono', monospace;
+  font-size:11px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--ocean);
+  opacity:0.75;
+}
+.masthead h1{
+  font-family:'Fraunces', serif;
+  font-weight:600;
+  font-size:clamp(26px,6vw,34px);
+  margin:4px 0 2px;
+  color:var(--ink);
+}
+.masthead p{
+  font-family:'Fraunces', serif;
+  font-style:italic;
+  font-weight:500;
+  font-size:14.5px;
+  color:var(--ocean-deep);
+  opacity:0.8;
+  margin:0;
+}
+
+/* ---------- the frame ---------- */
+.frame-outer{
+  position:relative;
+  padding:14px;
+  border-radius:6px;
+  background:
+    linear-gradient(155deg, #3a3a3a, #161616 35%, #050505 60%, #161616 85%, #2e2e2e);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.08) inset,
+    0 24px 40px -18px rgba(10,20,15,0.45),
+    0 2px 6px rgba(10,20,15,0.25);
+}
+.frame-outer::after{
+  content:"";
+  position:absolute; inset:6px;
+  border-radius:3px;
+  border:1px solid rgba(255,255,255,0.08);
+  pointer-events:none;
+}
+.frame-inner{
+  position:relative;
+  border-radius:2px;
+  overflow:hidden;
+  aspect-ratio:1/1;
+  background:var(--paper);
+  box-shadow:0 2px 10px rgba(0,0,0,0.35) inset;
+}
+
+/* corner flourishes — off for the plain black frame */
+.corner{ display:none; }
+.corner svg{width:100%;height:100%;display:block;}
+.corner.tl{top:2px; left:2px;}
+.corner.tr{top:2px; right:2px; transform:scaleX(-1);}
+.corner.bl{bottom:2px; left:2px; transform:scaleY(-1);}
+.corner.br{bottom:2px; right:2px; transform:scale(-1,-1);}
+
+/* ---------- artwork layers ---------- */
+.artboard{
+  position:absolute; inset:0;
+}
+.artwork{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.artwork svg{ width:78%; height:78%; }
+
+/* progressive reveal layers inside each artwork svg, toggled via data-phase on .artboard */
+.layer-outline{ transition:opacity .35s ease; }
+.layer-wash, .layer-color, .layer-detail, .layer-gloss{ transition:opacity .35s ease; }
+.layer-wash{ opacity:0; }
+.layer-color{ opacity:0; }
+.layer-detail{ opacity:0; }
+.layer-gloss{ opacity:0; }
+
+/* phase 0 = untouched blank canvas, before any field is filled */
+.artboard[data-phase="0"] .layer-outline{ opacity:0; }
+
+.artboard[data-phase="1"] .layer-wash{ opacity:0.55; }
+.artboard[data-phase="2"] .layer-wash{ opacity:1; }
+.artboard[data-phase="3"] .layer-wash{ opacity:1; }
+.artboard[data-phase="3"] .layer-color{ opacity:0.85; }
+.artboard[data-phase="4"] .layer-wash{ opacity:1; }
+.artboard[data-phase="4"] .layer-color{ opacity:1; }
+.artboard[data-phase="4"] .layer-detail{ opacity:1; }
+.artboard[data-phase="5"] .layer-wash{ opacity:1; }
+.artboard[data-phase="5"] .layer-color{ opacity:1; }
+.artboard[data-phase="5"] .layer-detail{ opacity:1; }
+.artboard[data-phase="5"] .layer-gloss{ opacity:0.9; }
+
+.artboard[data-phase="1"] .layer-outline{ filter:none; }
+.artboard[data-phase="1"] svg .sketch-only{ display:inline; }
+.artboard:not([data-phase="1"]) svg .sketch-only{ display:none; }
+
+/* the brush-wipe cover that sweeps across on every phase change */
+.brush-wipe{
+  position:absolute; top:-6%; bottom:-6%; left:-58%;
+  width:55%;
+  background:linear-gradient(100deg, transparent, var(--paper) 18%, var(--paper) 82%, transparent);
+  clip-path:polygon(
+    0% 4%, 7% 0%, 14% 5%, 21% 1%, 28% 6%, 35% 2%, 42% 5%, 49% 0%, 56% 4%, 63% 1%, 70% 6%, 77% 2%, 84% 5%, 91% 1%, 100% 4%,
+    100% 96%, 93% 100%, 86% 95%, 79% 99%, 72% 94%, 65% 98%, 58% 95%, 51% 100%, 44% 96%, 37% 99%, 30% 94%, 23% 98%, 16% 95%, 9% 99%, 0% 96%
+  );
+  opacity:0;
+  pointer-events:none;
+  z-index:4;
+}
+.brush-wipe.sweep{
+  animation:sweep 0.62s cubic-bezier(.55,.06,.4,.94) forwards;
+}
+@keyframes sweep{
+  0%{ transform:translateX(0%); opacity:0; }
+  8%{ opacity:1; }
+  92%{ opacity:1; }
+  100%{ transform:translateX(340%); opacity:0; }
+}
+
+.phase-caption{
+  position:absolute; left:0; right:0; bottom:0;
+  padding:9px 12px;
+  font-family:'JetBrains Mono', monospace;
+  font-size:10.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--paper);
+  background:linear-gradient(0deg, rgba(15,20,17,0.72), transparent);
+  z-index:6;
+}
+
+/* ---------- palette progress ---------- */
+.palette{
+  display:flex; justify-content:center; gap:10px;
+  margin:16px 0 4px;
+}
+.dab{
+  width:15px; height:15px; border-radius:60% 40% 55% 45% / 50% 55% 45% 50%;
+  background:var(--sand);
+  border:1px solid rgba(0,0,0,0.18);
+  transition:background .3s ease, transform .3s ease;
+}
+.dab.filled{ background:var(--coral); transform:scale(1.08) rotate(-6deg); }
+.dab.current{ box-shadow:0 0 0 3px rgba(199,154,61,0.35); }
+
+/* ---------- form card ---------- */
+.card{
+  background:var(--paper);
+  border-radius:8px;
+  padding:20px 20px 18px;
+  margin-top:14px;
+  box-shadow:0 10px 24px -14px rgba(10,20,15,0.28), 0 1px 0 rgba(255,255,255,0.5) inset;
+  border:1px solid rgba(15,76,74,0.10);
+}
+.card .step-label{
+  font-family:'JetBrains Mono', monospace;
+  font-size:10.5px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--ocean);
+  margin-bottom:6px;
+}
+.card h2{
+  font-family:'Fraunces', serif;
+  font-weight:600;
+  font-size:20px;
+  margin:0 0 14px;
+}
+.field-group{ margin-bottom:14px; }
+.field-group:last-of-type{ margin-bottom:0; }
+label.field-label{
+  display:block;
+  font-size:12.5px;
+  color:var(--ink);
+  opacity:0.7;
+  margin-bottom:6px;
+}
+input.field, textarea.field{
+  width:100%;
+  font-family:'Work Sans', sans-serif;
+  font-size:16px;
+  padding:12px 13px;
+  border-radius:6px;
+  border:1.5px solid rgba(15,76,74,0.22);
+  background:#fff;
+  color:var(--ink);
+  outline:none;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+textarea.field{ resize:none; min-height:78px; font-family:'Work Sans', sans-serif; }
+input.field:focus, textarea.field:focus{
+  border-color:var(--ocean);
+  box-shadow:0 0 0 3px rgba(15,76,74,0.12);
+}
+.field-error{ font-size:12px; color:var(--err); margin-top:6px; min-height:14px; }
+
+.actions{
+  display:flex; gap:10px; margin-top:16px;
+}
+button{
+  font-family:'Work Sans', sans-serif;
+  font-weight:600;
+  font-size:15px;
+  border:none;
+  border-radius:6px;
+  padding:13px 18px;
+  cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease, opacity .2s ease;
+}
+button:active{ transform:scale(0.98); }
+.btn-primary{
+  flex:1;
+  background:var(--ocean);
+  color:var(--paper);
+  box-shadow:0 6px 14px -6px rgba(15,76,74,0.55);
+}
+.btn-primary:disabled{ opacity:0.5; cursor:not-allowed; }
+.btn-ghost{
+  background:transparent;
+  color:var(--ocean);
+  border:1.5px solid rgba(15,76,74,0.25);
+}
+
+/* ---------- finished state ---------- */
+.finished-panel{ text-align:center; }
+.finished-panel .eyebrow{
+  font-family:'JetBrains Mono', monospace;
+  font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--coral);
+}
+.finished-panel h2{ margin:6px 0 8px; }
+.finished-panel p{ font-size:14.5px; opacity:0.75; margin:0 0 16px; line-height:1.5; }
+.status-line{
+  font-family:'JetBrains Mono', monospace;
+  font-size:11.5px;
+  color:var(--ocean);
+  margin-top:12px;
+  min-height:16px;
+}
+.status-line.err{ color:var(--err); }
+
+.hidden{ display:none !important; }
+
+@media (max-width:380px){
+  .stage{max-width:100%;}
+  .card{padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="masthead">
+    <div class="eyebrow">Aloha &amp; welcome</div>
+    <h1>Patrick Ching — Guest Book</h1>
+    <p>Sign in, and watch a piece come to life stroke by stroke.</p>
+  </div>
+
+  <div class="frame-outer">
+    <div class="corner tl"><svg viewBox="0 0 40 40"><path d="M2 2 Q2 20 2 38 M2 2 Q20 2 38 2 M2 10 Q10 10 10 2" fill="none" stroke="#5c4413" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="corner tr"><svg viewBox="0 0 40 40"><path d="M2 2 Q2 20 2 38 M2 2 Q20 2 38 2 M2 10 Q10 10 10 2" fill="none" stroke="#5c4413" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="corner bl"><svg viewBox="0 0 40 40"><path d="M2 2 Q2 20 2 38 M2 2 Q20 2 38 2 M2 10 Q10 10 10 2" fill="none" stroke="#5c4413" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="corner br"><svg viewBox="0 0 40 40"><path d="M2 2 Q2 20 2 38 M2 2 Q20 2 38 2 M2 10 Q10 10 10 2" fill="none" stroke="#5c4413" stroke-width="2" stroke-linecap="round"/></svg></div>
+
+    <div class="frame-inner">
+      <div class="artboard" id="artboard" data-phase="0">
+        <!-- 5 artwork slots; JS shows the one chosen for this session -->
+        <div class="artwork" data-art="honu" style="display:none">
+          <svg viewBox="0 0 200 200">
+            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.4" stroke-linejoin="round">
+              <path d="M100 62c-26 0-46 17-52 39-3 12 2 18 10 15 4 8 12 13 16 20-3 7 2 14 10 12 5 9 20 12 32 6 4 6 14 6 17-2 9 1 14-7 11-14 8-1 12-9 8-16 6-6 4-16-4-19-3-19-22-41-48-41z"/>
+              <circle cx="78" cy="88" r="3.2" fill="#1E241F"/>
+              <path d="M62 100c-10 4-18 2-22-6M138 100c10 4 18 2 22-6M96 150c-2 9-8 14-16 14M114 150c2 9 8 14 16 14" />
+            </g>
+            <g class="layer-wash">
+              <path d="M100 62c-26 0-46 17-52 39-3 12 2 18 10 15 4 8 12 13 16 20-3 7 2 14 10 12 5 9 20 12 32 6 4 6 14 6 17-2 9 1 14-7 11-14 8-1 12-9 8-16 6-6 4-16-4-19-3-19-22-41-48-41z" fill="#cfc6ab"/>
+            </g>
+            <g class="layer-color">
+              <path d="M100 66c-23 0-41 15-47 35 10-6 22-9 33-8 15 1 28 9 34 21 6-3 8-9 5-15-3-19-22-33-25-33z" fill="#2f7d6c"/>
+              <path d="M63 105c6 10 16 17 27 20 13 3 27 0 36-8-4-14-17-25-33-27-13-1-24 5-30 15z" fill="#3f9c86"/>
+            </g>
+            <g class="layer-detail" fill="none" stroke="#164a3d" stroke-width="1.3">
+              <path d="M100 70c-6 8-6 18 0 26M78 82c4 6 4 14-1 20M124 84c-5 6-5 13 0 19M92 118c3 6 3 12 0 17M112 120c-3 6-3 12 0 17"/>
+            </g>
+            <g class="layer-gloss">
+              <ellipse cx="86" cy="76" rx="8" ry="4" fill="#ffffff" opacity="0.35"/>
+            </g>
+          </svg>
+        </div>
+        <div class="artwork" data-art="whale" style="display:none">
+          <svg viewBox="0 0 200 200">
+            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.4" stroke-linejoin="round">
+              <path d="M40 150c20-70 70-92 108-78 14 5 20 16 14 24-10 2-24-2-30 4 10 4 18 12 16 20-10 4-24 0-30-6-4 14-18 24-34 26-16 22-34 24-44 10z"/>
+              <path d="M118 66c8-10 22-14 30-8-4 8-14 14-24 14z"/>
+            </g>
+            <g class="layer-wash">
+              <path d="M40 150c20-70 70-92 108-78 14 5 20 16 14 24-10 2-24-2-30 4 10 4 18 12 16 20-10 4-24 0-30-6-4 14-18 24-34 26-16 22-34 24-44 10z" fill="#c9d3d0"/>
+            </g>
+            <g class="layer-color">
+              <path d="M50 146c18-56 58-78 92-70 8 2 12 8 10 14-30-8-64 4-82 40-6 12-14 18-20 16z" fill="#0F4C4A"/>
+              <path d="M62 156c8-4 14-12 18-22 20 4 42-2 56-18 4 10-2 22-14 30-18 12-42 16-60 10z" fill="#1c6b64"/>
+            </g>
+            <g class="layer-detail" fill="none" stroke="#08302e" stroke-width="1.2">
+              <path d="M60 130c6-18 18-32 32-40M84 96c10-4 22-4 32 2M64 150c14 4 30 2 42-8"/>
+            </g>
+            <g class="layer-gloss">
+              <ellipse cx="70" cy="112" rx="10" ry="5" fill="#ffffff" opacity="0.3"/>
+            </g>
+          </svg>
+        </div>
+        <div class="artwork" data-art="iiwi" style="display:none">
+          <svg viewBox="0 0 200 200">
+            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.4" stroke-linejoin="round">
+              <path d="M120 70c18-6 34 2 38 14-10 4-20 2-26-4 4 8 2 18-6 22 6 10 2 22-10 26-2 12-14 20-28 18-16 10-34 2-38-14-10-2-16-12-12-22-8-6-8-18 2-24 2-10 12-16 22-14 8-8 22-8 30 0z"/>
+              <circle cx="132" cy="82" r="2.6" fill="#1E241F"/>
+              <path d="M148 84c8 0 14 4 16 10-8 2-16-2-18-8z"/>
+            </g>
+            <g class="layer-wash">
+              <path d="M120 70c18-6 34 2 38 14-10 4-20 2-26-4 4 8 2 18-6 22 6 10 2 22-10 26-2 12-14 20-28 18-16 10-34 2-38-14-10-2-16-12-12-22-8-6-8-18 2-24 2-10 12-16 22-14 8-8 22-8 30 0z" fill="#d8c9a3"/>
+            </g>
+            <g class="layer-color">
+              <path d="M124 74c14-4 26 2 30 10-16-4-30 2-38 14-8-10-20-14-32-10 6-10 18-16 30-14 4-4 6 0 10 0z" fill="#C1502E"/>
+              <path d="M64 126c-4 10 2 20 12 22 12 2 24-6 28-18-14-6-28-6-40-4z" fill="#d9663c"/>
+            </g>
+            <g class="layer-detail" fill="none" stroke="#7a2b16" stroke-width="1.2">
+              <path d="M96 100c8-4 18-4 26 0M74 128c8 2 16 0 22-6"/>
+            </g>
+            <g class="layer-gloss">
+              <ellipse cx="128" cy="80" rx="6" ry="3" fill="#ffffff" opacity="0.4"/>
+            </g>
+          </svg>
+        </div>
+        <div class="artwork" data-art="hibiscus" style="display:none">
+          <svg viewBox="0 0 200 200">
+            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.2" stroke-linejoin="round">
+              <path d="M100 60c8 12 6 26-2 34 14-4 26 2 30 14-14 2-24-4-30-14 6 14 2 28-10 34 2-14-4-26-14-32 2 14-4 26-16 30 6-12 4-24-4-32-12 2-22-4-26-16 12-2 22 4 26 14-4-14 2-28 14-34-8 8-8 20 0 28 2-14 14-24 28-24-10-4-16-14-14-24 8 4 14 12 18 22z"/>
+              <circle cx="100" cy="100" r="6" fill="#1E241F"/>
+              <path d="M100 106c2 10 2 20-2 28" />
+            </g>
+            <g class="layer-wash">
+              <circle cx="100" cy="100" r="42" fill="#dcc9c1"/>
+            </g>
+            <g class="layer-color">
+              <path d="M100 60c8 12 6 26-2 34 14-4 26 2 30 14-14 2-24-4-30-14 6 14 2 28-10 34 2-14-4-26-14-32 2 14-4 26-16 30 6-12 4-24-4-32-12 2-22-4-26-16 12-2 22 4 26 14-4-14 2-28 14-34-8 8-8 20 0 28 2-14 14-24 28-24-10-4-16-14-14-24 8 4 14 12 18 22z" fill="#C1502E"/>
+            </g>
+            <g class="layer-detail" fill="none" stroke="#7a2b16" stroke-width="1.1">
+              <path d="M100 66c4 10 4 20 0 28M74 80c8 4 14 12 16 20M126 80c-8 4-14 12-16 20M70 118c8-2 16-8 20-16M130 118c-8-2-16-8-20-16"/>
+            </g>
+            <g class="layer-gloss">
+              <ellipse cx="90" cy="88" rx="6" ry="3" fill="#ffffff" opacity="0.35"/>
+            </g>
+          </svg>
+        </div>
+        <div class="artwork" data-art="reef" style="display:none">
+          <svg viewBox="0 0 200 200">
+            <g class="layer-outline" fill="none" stroke="#1E241F" stroke-width="2.2" stroke-linejoin="round">
+              <path d="M40 110c30-24 60-24 90-6 10-10 24-12 34-4-4 12-16 18-28 16 4 8 2 18-6 22-16 10-38 6-50-6-18 8-36 2-40-14z"/>
+              <path d="M118 96l16-14M120 118l18 6"/>
+              <circle cx="66" cy="104" r="2.4" fill="#1E241F"/>
+            </g>
+            <g class="layer-wash">
+              <path d="M40 110c30-24 60-24 90-6 10-10 24-12 34-4-4 12-16 18-28 16 4 8 2 18-6 22-16 10-38 6-50-6-18 8-36 2-40-14z" fill="#cdd8c9"/>
+            </g>
+            <g class="layer-color">
+              <path d="M46 108c26-18 52-18 78-4-4 12-16 20-30 20-20 0-38-6-48-16z" fill="#C79A3D"/>
+              <path d="M96 106c8-10 20-16 34-14 6 10-2 22-14 26-10-2-16-6-20-12z" fill="#0F4C4A"/>
+            </g>
+            <g class="layer-detail" fill="none" stroke="#5c4413" stroke-width="1.1">
+              <path d="M54 108c10-6 22-8 32-6M100 110c6-6 14-10 22-10"/>
+            </g>
+            <g class="layer-gloss">
+              <ellipse cx="60" cy="100" rx="6" ry="3" fill="#ffffff" opacity="0.35"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="brush-wipe" id="wipe"></div>
+      <div class="phase-caption" id="phaseCaption">Blank canvas</div>
+    </div>
+  </div>
+
+  <div class="palette" id="palette">
+    <div class="dab" data-i="1"></div>
+    <div class="dab" data-i="2"></div>
+    <div class="dab" data-i="3"></div>
+    <div class="dab" data-i="4"></div>
+    <div class="dab" data-i="5"></div>
+  </div>
+
+  <!-- GUEST BOOK FORM — all fields on one screen -->
+  <form class="card" id="stepCard" autocomplete="off" novalidate>
+    <h2>Sign the guest book</h2>
+
+    <div class="field-group" data-key="name">
+      <label class="field-label" for="f_name">Name</label>
+      <input class="field" id="f_name" type="text" placeholder="e.g. Kalani Wong" />
+      <div class="field-error" id="err_name"></div>
+    </div>
+
+    <div class="field-group" data-key="email">
+      <label class="field-label" for="f_email">Email</label>
+      <input class="field" id="f_email" type="email" placeholder="you@example.com" />
+      <div class="field-error" id="err_email"></div>
+    </div>
+
+    <div class="field-group" data-key="phone">
+      <label class="field-label" for="f_phone">Phone number</label>
+      <input class="field" id="f_phone" type="tel" placeholder="(808) 555-0100" />
+      <div class="field-error" id="err_phone"></div>
+    </div>
+
+    <div class="field-group" data-key="city">
+      <label class="field-label" for="f_city">City</label>
+      <input class="field" id="f_city" type="text" placeholder="e.g. Honolulu" />
+      <div class="field-error" id="err_city"></div>
+    </div>
+
+    <div class="field-group" data-key="note">
+      <label class="field-label" for="f_note">Leave a little note</label>
+      <textarea class="field" id="f_note" placeholder="Say aloha..."></textarea>
+      <div class="field-error" id="err_note"></div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn-primary" id="submitBtn">Submit &amp; email me</button>
+    </div>
+    <div class="status-line" id="statusLine"></div>
+  </form>
+
+  <!-- THANK YOU / RESET PANEL -->
+  <div class="card finished-panel hidden" id="thanksCard">
+    <div class="eyebrow">Aloha</div>
+    <h2>You're in the book!</h2>
+    <p>Look for the finished piece in your inbox shortly. This kiosk will reset for the next guest in a few seconds.</p>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — edit these two things for a real deployment
+   ============================================================ */
+// 1) Paste the Google Apps Script Web App URL here (see SETUP.md)
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzB08TZ3_MGXs647qNnoUxAxvuAxonvMPWkYDPoCOrX25eOXJ2dYgRl82kodtXyAGAf/exec";
+
+// 2) The 5 artwork keys must match the data-art attributes above.
+//    Order doesn't matter — one is picked at random per guest.
+const ARTWORKS = ["honu", "whale", "iiwi", "hibiscus", "reef"];
+const ARTWORK_LABELS = {
+  honu: "Honu — Green Sea Turtle",
+  whale: "Koholā — Humpback Whale",
+  iiwi: "ʻIʻiwi — Scarlet Honeycreeper",
+  hibiscus: "Hibiscus",
+  reef: "Reef Scene"
+};
+
+/* ============================================================
+   Field definitions — order here just controls the "sketch → finished"
+   caption/phase labels; the fields themselves can be filled in any order.
+   ============================================================ */
+const FIELDS = [
+  { key:"name",  caption:"Phase 01 — Sketch",     validate:v=>v.trim().length>0 || "Please enter your name" },
+  { key:"email", caption:"Phase 02 — Stencil",    validate:v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) || "That doesn't look like a valid email" },
+  { key:"phone", caption:"Phase 03 — Underpaint", validate:v=>v.trim().length>=7 || "Please enter a valid phone number" },
+  { key:"city",  caption:"Phase 04 — Detail",     validate:v=>v.trim().length>0 || "Please enter your city" },
+  { key:"note",  caption:"Phase 05 — Finished",   validate:v=>v.trim().length>0 || "Say a little something!" }
+];
+
+let phaseReached = 0; // how many fields are currently valid (0-5)
+let chosenArt = ARTWORKS[Math.floor(Math.random()*ARTWORKS.length)];
+
+const artboard = document.getElementById('artboard');
+const wipe = document.getElementById('wipe');
+const caption = document.getElementById('phaseCaption');
+const palette = document.getElementById('palette');
+const stepCard = document.getElementById('stepCard');
+const thanksCard = document.getElementById('thanksCard');
+
+function showArtwork(key){
+  document.querySelectorAll('.artwork').forEach(el=>{
+    el.style.display = (el.dataset.art === key) ? 'flex' : 'none';
+  });
+}
+showArtwork(chosenArt);
+
+function updatePalette(n){
+  palette.querySelectorAll('.dab').forEach(d=>{
+    const i = parseInt(d.dataset.i,10);
+    d.classList.toggle('filled', i <= n);
+    d.classList.toggle('current', i === n);
+  });
+}
+
+function triggerWipe(newPhase, newCaption){
+  wipe.classList.remove('sweep');
+  void wipe.offsetWidth; // restart animation
+  wipe.classList.add('sweep');
+  setTimeout(()=>{
+    artboard.dataset.phase = String(newPhase);
+    caption.textContent = newCaption;
+  }, 300); // swap mid-sweep, under cover of the brush
+  updatePalette(newPhase);
+}
+
+function getInput(key){
+  return document.getElementById('f_' + key);
+}
+
+// Recompute how many fields are currently valid, and animate the
+// artwork forward or back if that count has changed.
+function refreshPhase(){
+  let count = 0;
+  for(const f of FIELDS){
+    const val = getInput(f.key).value;
+    if(f.validate(val) === true) count++;
+    else break; // count only a contiguous "front" so the palette fills in order
+  }
+  if(count !== phaseReached){
+    phaseReached = count;
+    const cap = FIELDS[phaseReached - 1] || null;
+    triggerWipe(phaseReached, cap ? cap.caption : "Blank canvas");
+  }
+}
+
+FIELDS.forEach(f=>{
+  const input = getInput(f.key);
+  input.addEventListener('input', ()=>{
+    document.getElementById('err_' + f.key).textContent = "";
+    refreshPhase();
+  });
+  input.addEventListener('blur', ()=>{
+    const result = f.validate(input.value);
+    document.getElementById('err_' + f.key).textContent = (result === true || input.value.trim() === "") ? "" : result;
+  });
+});
+
+updatePalette(0);
+
+stepCard.addEventListener('submit', e=>{
+  e.preventDefault(); // belt-and-suspenders: never let the form actually navigate
+});
+
+document.getElementById('submitBtn').addEventListener('click', async ()=>{
+  // Validate every field on submit, show errors, focus the first bad one.
+  let firstInvalid = null;
+  for(const f of FIELDS){
+    const input = getInput(f.key);
+    const result = f.validate(input.value);
+    document.getElementById('err_' + f.key).textContent = (result === true) ? "" : result;
+    if(result !== true && !firstInvalid) firstInvalid = input;
+  }
+  if(firstInvalid){
+    firstInvalid.focus();
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  const statusLine = document.getElementById('statusLine');
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  statusLine.classList.remove('err');
+  statusLine.textContent = "Writing to the guest book…";
+
+  const payload = {
+    name: getInput('name').value.trim(),
+    email: getInput('email').value.trim(),
+    phone: getInput('phone').value.trim(),
+    city: getInput('city').value.trim(),
+    note: getInput('note').value.trim(),
+    artwork: ARTWORK_LABELS[chosenArt] || chosenArt,
+    timestamp: new Date().toISOString()
+  };
+
+  try{
+    if(SCRIPT_URL.indexOf("PASTE_YOUR") === 0){
+      // Demo mode — no backend configured yet
+      await new Promise(r=>setTimeout(r, 900));
+      statusLine.textContent = "Demo mode: connect SCRIPT_URL to actually save & email (see SETUP.md).";
+    } else {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors", // Apps Script web apps don't return readable CORS headers
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      statusLine.textContent = "Saved! Check your inbox shortly.";
+    }
+    setTimeout(()=>{
+      stepCard.classList.add('hidden');
+      thanksCard.classList.remove('hidden');
+      setTimeout(resetKiosk, 6000);
+    }, 500);
+  } catch(err){
+    statusLine.classList.add('err');
+    statusLine.textContent = "Something went wrong — please try again.";
+    btn.disabled = false;
+    btn.textContent = "Submit & email me";
+  }
+});
+
+function resetKiosk(){
+  phaseReached = 0;
+  FIELDS.forEach(f=>{
+    getInput(f.key).value = "";
+    document.getElementById('err_' + f.key).textContent = "";
+  });
+  chosenArt = ARTWORKS[Math.floor(Math.random()*ARTWORKS.length)];
+  showArtwork(chosenArt);
+  artboard.dataset.phase = "0";
+  caption.textContent = "Blank canvas";
+  updatePalette(0);
+  thanksCard.classList.add('hidden');
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = false;
+  btn.textContent = "Submit & email me";
+  document.getElementById('statusLine').textContent = "";
+  stepCard.classList.remove('hidden');
+  getInput('name').focus();
+}
+</script>
+</body>
+</html>
